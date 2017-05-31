@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=1, minimum-scale=1, maximum-scale=1">
+<meta name="renderer" content="webkit">
+<meta name="google" value="notranslate">
+<meta name="robots" content="index,follow">
+
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="微光萤火">
+<meta name="twitter:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta name="twitter:image:src" content="http://www.chole.io/blog/images/avatar.png">
+
+<meta property="og:url" content="http://www.chole.io/blog">
+<meta property="og:title" content="微光萤火">
+<meta property="og:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta property="og:site_name" content="微光萤火">
+<meta property="og:image" content="http://www.chole.io/blog/images/avatar.png">
+<meta property="og:type" content="website">
+<meta name="robots" content="noodp">
+
+<meta itemprop="name" content="微光萤火">
+<meta itemprop="description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta itemprop="image" content="http://www.chole.io/blog/images/avatar.png">
+
+<link rel="canonical" href="http://www.chole.io/blog">
+
+<link rel="shortcut icon" href="/favicon.png">
+<link rel="apple-itouch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/bundle/index.css">
+<script type="text/javascript">
+    var timeSinceLang = {
+        year: '年前',
+        month: '个月前',
+        day: '天前',
+        hour: '小时前',
+        minute: '分钟前',
+        second: '秒前'
+    };
+    var root = '';
+</script>
+
+<script type="text/javascript">
+    var conn, reloadTimer, connectTimer;
+    var connect = function() {
+        conn = new WebSocket('ws://' + location.host + '/live');
+        conn.onmessage = function(event) {
+            if (event.data === 'change') {
+                if (reloadTimer) clearTimeout(reloadTimer);
+                reloadTimer = setTimeout(function() {
+                    window.location.reload();
+                }, 200);
+            }
+        };
+        conn.onclose = function() {
+            if (connectTimer) clearTimeout(connectTimer);
+            connectTimer = setTimeout(function() {
+                connect();
+            }, 1000);
+        };
+    };
+    connect();
+</script>
+
+
+        <meta name="keywords" content="笔记,spring,java,">
+        <meta name="description" content="Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理">
+        <meta name="author" content="扑腾的萤火虫">
+        <title>Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理</title>
+    </head>
+    <body>
+        <article class="container">
+            <header class="header-wrap">
+  <a class="index" href="/">
+    <img class="logo" src="/images/avatar.png" />
+    微光萤火
+  </a>
+  <ul class="menu">
+      <li class="menu-item"><a href="/archive.html">归档</a></li>
+      <li class="menu-item"><a href="/tag.html">标签</a></li>
+      <li class="menu-item"><a href="/atom.xml">订阅</a></li>
+  </ul>
+</header>
+
+            <article class="main article">
+                <h1 class="title">Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理</h1>
+                <section class="info">
+                    <span class="avatar" style="background-image: url(/images/avatar.png);"></span>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    
+                    <span class="date" data-time="1468227600"><span class="from"></span></span>
+                    
+                    <span class="tags"><a class="tag" href="/tag/%e7%ac%94%e8%ae%b0/index.html">笔记</a><a class="tag" href="/tag/spring/index.html">spring</a><a class="tag" href="/tag/java/index.html">java</a></span>
+                </section>
+                <article class="content"><h3>IOC的基础</h3>
+
+<p>下面我们从IOC/AOP开始，它们是Spring平台实现的核心部分；虽然，我们一开始大多只是在这个层面上，做一些配置和外部特性的使用工作，但对这两个核心模块工作原理和运作机制的理解，对深入理解Spring平台，却是至关重要的；因为，它们同时也是Spring其他模块实现的基础。从Spring要做到的目标，也就是从简化Java EE开发的出发点来看，简单的来说，它是通过对POJO开发的支持，来具体实现的；具体的说，Spring通过为应用开发提供基于POJO的开发模式，把应用开发和复杂的Java EE服务，实现解耦，并通过提高单元测试的覆盖率，从而有效的提高整个应用的开发质量。这样一来，实际上，就需要把为POJO提供支持的，各种Java EE服务支持抽象到应用平台中去，去封装起来；而这种封装功能的实现，在Spring中，就是由IOC容器以及AOP来具体提供的，这两个模块，在很大程度上，体现了Spring作为应用开发平台的核心价值。它们的实现，是Rod.Johnson在他的另一本著作《Expert One-on-One J2EE Development without EJB》 中，所提到Without EJB设计思想的体现；同时也深刻的体现了Spring背后的设计理念。</p>
+
+<p>从更深一点的技术层面上来看，因为Spring是一个基于Java语言的应用平台，如果我们能够对Java计算模型，比如像JVM虚拟机实现技术的基本原理有一些了解，会让我们对Spring实现的理解，更加的深入，这些JVM虚拟机的特性使用，包括像反射机制，代理类，字节码技术等等。它们都是在Spring实现中，涉及到的一些Java计算环境的底层技术；尽管对应用开发人员来说，可能不会直接去涉及这些JVM虚拟机底层实现的工作，但是了解这些背景知识，或多或少，对我们了解整个Spring平台的应用背景有很大的帮助；打个比方来说，就像我们在大学中，学习的那些关于计算机组织和系统方面的基本知识，比如像数字电路，计算机组成原理，汇编语言，操作系统等等这些基本课程的学习。虽然，坦率的来说，对我们这些大多数课程的学习者，在以后的工作中，可能并没有太多的机会，直接从事这么如此底层的技术开发工作；但具备这些知识背景，为我们深入理解基于这些基础技术构架起来的应用系统，毫无疑问，是不可缺少的。随着JVM虚拟机技术的发展，可以设想到的是，更多虚拟机级别的基本特性，将会持续的被应用平台开发者所关注和采用，这也是我们在学习平台实现的过程中，非常值得注意的一点，因为这些底层技术实现，毫无疑问，会对Spring应用平台的开发路线，产品策略产生重大的影响。同时，在使用Spring作为应用平台的时候，如果需要更深层次的开发和性能调优，这些底层的知识，也是我们知识库中不可缺少的部分。有了这些底层知识，理解整个系统，想来就应该障碍不大了。</p>
+
+<h3>IOC的一点认识</h3>
+
+<p>对Spring IOC的理解离不开对依赖反转模式的理解，我们知道，关于如何反转对依赖的控制，把控制权从具体业务对象手中转交到平台或者框架中，是解决面向对象系统设计复杂性和提高面向对象系统可测试性的一个有效的解决方案。这个问题触发了IoC设计模式的发展，是IoC容器要解决的核心问题。同时，也是产品化的IoC容器出现的推动力。而我觉得Spring的IoC容器，就是一个开源的实现依赖反转模式的产品。</p>
+
+<p>那具体什么是IoC容器呢？它在Spring框架中到底长什么样？说了这么多，其实对IoC容器的使用者来说，我们常常接触到的BeanFactory和ApplicationContext都可以看成是容器的具体表现形式。这些就是IoC容器，或者说在Spring中提IoC容器，从实现来说，指的是一个容器系列。这也就是说，我们通常所说的IoC容器，如果深入到Spring的实现去看，会发现IoC容器实际上代表着一系列功能各异的容器产品。只是容器的功能有大有小，有各自的特点。打个比方来说，就像是百货商店里出售的商品，我们举水桶为例子，在商店中出售的水桶有大有小；制作材料也各不相同，有金属的，有塑料的等等，总之是各式各样，但只要能装水，具备水桶的基本特性，那就可以作为水桶来出售来让用户使用。这在Spring中也是一样，它有各式各样的IoC容器的实现供用户选择和使用；使用什么样的容器完全取决于用户的需要，但在使用之前如果能够了解容器的基本情况，那会对容器的使用是非常有帮助的；就像我们在购买商品时进行的对商品的考察和挑选那样。</p>
+
+<p>我们从最基本的XmlBeanFactory看起，它是容器系列的最底层实现，这个容器的实现与我们在Spring应用中用到的那些上下文相比，有一个非常明显的特点，它只提供了最基本的IoC容器的功能。从它的名字中可以看出，这个IoC容器可以读取以XML形式定义的BeanDefinition。理解这一点有助于我们理解ApplicationContext与基本的BeanFactory之间的区别和联系。我们可以认为直接的BeanFactory实现是IoC容器的基本形式，而各种ApplicationContext的实现是IoC容器的高级表现形式。</p>
+
+<p>仔细阅读XmlBeanFactory的源码，在一开始的注释里面已经对 XmlBeanFactory的功能做了简要的说明，从代码的注释还可以看到，这是Rod Johnson在2001年就写下的代码，可见这个类应该是Spring的元老类了。它是继承DefaultListableBeanFactory这个类的，这个DefaultListableBeanFactory就是一个很值得注意的容器！</p>
+
+<pre><code class="language-java">public class XmlBeanFactory extends DefaultListableBeanFactory {  
+    private final XmlBeanDefinitionReader reader = new XmlBeanDefinitionReader(this);  
+    public XmlBeanFactory(Resource resource) throws BeansException {  
+        this(resource, null);  
+    }  
+    public XmlBeanFactory(Resource resource, BeanFactory parentBeanFactory) throws BeansException {  
+        super(parentBeanFactory);  
+        this.reader.loadBeanDefinitions(resource);  
+    }  
+}  
+</code></pre>
+
+<p>XmlBeanFactory的功能是建立在DefaultListableBeanFactory这个基本容器的基础上的，在这个基本容器的基础上实现了其他诸如XML读取的附加功能。对于这些功能的实现原理，看一看XmlBeanFactory的代码实现就能很容易地理解。在如下的代码中可以看到，在XmlBeanFactory构造方法中需要得到Resource对象。对XmlBeanDefinitionReader对象的初始化，以及使用这个这个对象来完成loadBeanDefinitions的调用，就是这个调用启动了从Resource中载入BeanDefinitions的过程，这个loadBeanDefinitions同时也是IoC容器初始化的重要组成部分。</p>
+
+<p>简单来说，IoC容器的初始化包括BeanDefinition的Resouce定位、载入和注册这三个基本的过程。我觉得重点是在载入和对BeanDefinition做解析的这个过程。可以从DefaultListableBeanFactory来入手看看IoC容器是怎样完成BeanDefinition载入的。在refresh调用完成以后，可以看到loadDefinition的调用：</p>
+
+<pre><code class="language-java">public abstract class AbstractXmlApplicationContext extends AbstractRefreshableConfigApplicationContext {
+	public AbstractXmlApplicationContext() {
+	}
+	public AbstractXmlApplicationContext(ApplicationContext parent) {
+		super(parent);
+	}
+	//这里是实现loadBeanDefinitions的地方
+	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws IOException {
+		// Create a new XmlBeanDefinitionReader for the given BeanFactory.
+		// 创建 XmlBeanDefinitionReader，并通过回调设置到 BeanFactory中去，创建BeanFactory的使用的也是 DefaultListableBeanFactory。
+		XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
+
+		// Configure the bean definition reader with this context's
+		// resource loading environment.
+		// 这里设置 XmlBeanDefinitionReader， 为XmlBeanDefinitionReader 配置ResourceLoader，因为DefaultResourceLoader是父类，所以this可以直接被使用
+		beanDefinitionReader.setResourceLoader(this);
+		beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
+
+		// Allow a subclass to provide custom initialization of the reader,
+		// then proceed with actually loading the bean definitions.
+	// 这是启动Bean定义信息载入的过程
+		initBeanDefinitionReader(beanDefinitionReader);
+		loadBeanDefinitions(beanDefinitionReader);
+	}
+
+	protected void initBeanDefinitionReader(XmlBeanDefinitionReader beanDefinitionReader) {
+	}
+
+</code></pre>
+
+<p>这里使用 XmlBeanDefinitionReader来载入BeanDefinition到容器中，如以下代码清单所示：</p>
+
+<pre><code class="language-java">	/**
+	 * 这里对指定bean元素的property子元素集合进行解析。
+	 */
+	public void parsePropertyElements(Element beanEle, BeanDefinition bd) {
+		//遍历所有bean元素下定义的property元素
+		NodeList nl = beanEle.getChildNodes();
+		for (int i = 0; i &lt; nl.getLength(); i++) {
+			Node node = nl.item(i);
+			if (node instanceof Element &amp;&amp; DomUtils.nodeNameEquals(node, PROPERTY_ELEMENT)) {
+				//在判断是property元素后对该property元素进行解析的过程
+				parsePropertyElement((Element) node, bd);
+			}
+		}
+	}
+	public void parsePropertyElement(Element ele, BeanDefinition bd) {
+		//这里取得property的名字
+		String propertyName = ele.getAttribute(NAME_ATTRIBUTE);
+		if (!StringUtils.hasLength(propertyName)) {
+			error(&quot;Tag 'property' must have a 'name' attribute&quot;, ele);
+			return;
+		}
+		this.parseState.push(new PropertyEntry(propertyName));
+		try {
+			//如果同一个bean中已经有同名的存在，则不进行解析，直接返回。也就是说，如果在同一个bean中有同名的property设置，那么起作用的只是第一个。
+			if (bd.getPropertyValues().contains(propertyName)) {
+				error(&quot;Multiple 'property' definitions for property '&quot; + propertyName + &quot;'&quot;, ele);
+				return;
+			}
+			//这里是解析property值的地方，返回的对象对应对Bean定义的property属性设置的解析结果，这个解析结果会封装到PropertyValue对象中，然后设置到BeanDefinitionHolder中去。
+			Object val = parsePropertyValue(ele, bd, propertyName);
+			PropertyValue pv = new PropertyValue(propertyName, val);
+			parseMetaElements(ele, pv);
+			pv.setSource(extractSource(ele));
+			bd.getPropertyValues().addPropertyValue(pv);
+		}
+		finally {
+			this.parseState.pop();
+		}
+	}
+	/**
+	 * 这里取得property元素的值，也许是一个list或其他。
+	 */
+	public Object parsePropertyValue(Element ele, BeanDefinition bd, String propertyName) {
+		String elementName = (propertyName != null) ?
+						&quot;&lt;property&gt; element for property '&quot; + propertyName + &quot;'&quot; :
+						&quot;&lt;constructor-arg&gt; element&quot;;
+
+		// Should only have one child element: ref, value, list, etc.
+		NodeList nl = ele.getChildNodes();
+		Element subElement = null;
+		for (int i = 0; i &lt; nl.getLength(); i++) {
+			Node node = nl.item(i);
+			if (node instanceof Element &amp;&amp; !DomUtils.nodeNameEquals(node, DESCRIPTION_ELEMENT) &amp;&amp;
+					!DomUtils.nodeNameEquals(node, META_ELEMENT)) {
+				// Child element is what we're looking for.
+				if (subElement != null) {
+					error(elementName + &quot; must not contain more than one sub-element&quot;, ele);
+				}
+				else {
+					subElement = (Element) node;
+				}
+			}
+		}
+		//这里判断property的属性，是ref还是value,不允许同时是ref和value。
+		boolean hasRefAttribute = ele.hasAttribute(REF_ATTRIBUTE);
+		boolean hasValueAttribute = ele.hasAttribute(VALUE_ATTRIBUTE);
+		if ((hasRefAttribute &amp;&amp; hasValueAttribute) ||
+				((hasRefAttribute || hasValueAttribute) &amp;&amp; subElement != null)) {
+			error(elementName +
+					&quot; is only allowed to contain either 'ref' attribute OR 'value' attribute OR sub-element&quot;, ele);
+		}
+		//如果是ref，创建一个ref的数据对象RuntimeBeanReference,这个对象封装了ref的信息。
+		if (hasRefAttribute) {
+			String refName = ele.getAttribute(REF_ATTRIBUTE);
+			if (!StringUtils.hasText(refName)) {
+				error(elementName + &quot; contains empty 'ref' attribute&quot;, ele);
+			}
+			RuntimeBeanReference ref = new RuntimeBeanReference(refName);
+			ref.setSource(extractSource(ele));
+			return ref;
+		} //如果是value，创建一个value的数据对象TypedStringValue ,这个对象封装了value的信息。
+		else if (hasValueAttribute) {
+			TypedStringValue valueHolder = new TypedStringValue(ele.getAttribute(VALUE_ATTRIBUTE));
+			valueHolder.setSource(extractSource(ele));
+			return valueHolder;
+		} //如果还有子元素，触发对子元素的解析
+		else if (subElement != null) {
+			return parsePropertySubElement(subElement, bd);
+		}
+		else {
+			// Neither child element nor &quot;ref&quot; or &quot;value&quot; attribute found.
+			error(elementName + &quot; must specify a ref or value&quot;, ele);
+			return null;
+		}
+	}
+</code></pre>
+
+<p>关于具体的Spring BeanDefinition的解析，是在BeanDefinitionParserDelegate中完成的。这个类里包含了各种Spring Bean定义规则的处理，感兴趣的同学可以仔细研究。我们举一个例子来分析这个处理过程，比如我们最熟悉的对Bean元素的处理是怎样完成的，也就是我们在XML定义文件中出现的<bean></bean>这个最常见的元素信息是怎样被处理的。在这里，我们会看到那些熟悉的BeanDefinition定义的处理，比如id、name、aliase等属性元素。把这些元素的值从XML文件相应的元素的属性中读取出来以后，会被设置到生成的BeanDefinitionHolder中去。这些属性的解析还是比较简单的。对于其他元素配置的解析，比如各种Bean的属性配置，通过一个较为复杂的解析过程，这个过程是由parseBeanDefinitionElement来完成的。解析完成以后，会把解析结果放到BeanDefinition对象中并设置到BeanDefinitionHolder中去，如以下清单所示：</p>
+
+<pre><code class="language-java">public BeanDefinitionHolder parseBeanDefinitionElement(Element ele, BeanDefinition containingBean) {
+		//这里取得在&lt;bean&gt;元素中定义的id、name和aliase属性的值
+		String id = ele.getAttribute(ID_ATTRIBUTE);
+		String nameAttr = ele.getAttribute(NAME_ATTRIBUTE);
+
+		List&lt;String&gt; aliases = new ArrayList&lt;String&gt;();
+		if (StringUtils.hasLength(nameAttr)) {
+			String[] nameArr = StringUtils.tokenizeToStringArray(nameAttr, BEAN_NAME_DELIMITERS);
+			aliases.addAll(Arrays.asList(nameArr));
+		}
+
+		String beanName = id;
+		if (!StringUtils.hasText(beanName) &amp;&amp; !aliases.isEmpty()) {
+			beanName = aliases.remove(0);
+			if (logger.isDebugEnabled()) {
+				logger.debug(&quot;No XML 'id' specified - using '&quot; + beanName +
+						&quot;' as bean name and &quot; + aliases + &quot; as aliases&quot;);
+			}
+		}
+
+		if (containingBean == null) {
+			checkNameUniqueness(beanName, aliases, ele);
+		}
+
+		//这个方法会引发对bean元素的详细解析
+AbstractBeanDefinition beanDefinition = parseBeanDefinitionElement(ele, beanName, containingBean);
+		if (beanDefinition != null) {
+			if (!StringUtils.hasText(beanName)) {
+				try {
+					if (containingBean != null) {
+						beanName = BeanDefinitionReaderUtils.generateBeanName(
+								beanDefinition, this.readerContext.getRegistry(), true);
+					}
+					else {
+						beanName = this.readerContext.generateBeanName(beanDefinition);
+						// Register an alias for the plain bean class name, if still possible,
+						// if the generator returned the class name plus a suffix.
+						// This is expected for Spring 1.2/2.0 backwards compatibility.
+						String beanClassName = beanDefinition.getBeanClassName();
+						if (beanClassName != null &amp;&amp;
+								beanName.startsWith(beanClassName) &amp;&amp; beanName.length() &gt; beanClassName.length() &amp;&amp;
+								!this.readerContext.getRegistry().isBeanNameInUse(beanClassName)) {
+							aliases.add(beanClassName);
+						}
+					}
+					if (logger.isDebugEnabled()) {
+						logger.debug(&quot;Neither XML 'id' nor 'name' specified - &quot; +
+								&quot;using generated bean name [&quot; + beanName + &quot;]&quot;);
+					}
+				}
+				catch (Exception ex) {
+					error(ex.getMessage(), ele);
+					return null;
+				}
+			}
+			String[] aliasesArray = StringUtils.toStringArray(aliases);
+			return new BeanDefinitionHolder(beanDefinition, beanName, aliasesArray);
+		}
+
+		return null;
+	}
+</code></pre>
+
+<p>比如，再往下看，我们看到像List这样的属性配置是怎样被解析的，依然在BeanDefinitionParserDelegate中：返回的是一个List对象，这个List是Spring定义的ManagedList，作为封装List这类配置定义的数据封装，如以下代码清单所示。</p>
+
+<pre><code class="language-java">	public List parseListElement(Element collectionEle, BeanDefinition bd) {
+		String defaultElementType = collectionEle.getAttribute(VALUE_TYPE_ATTRIBUTE);
+		NodeList nl = collectionEle.getChildNodes();
+		ManagedList&lt;Object&gt; target = new ManagedList&lt;Object&gt;(nl.getLength());
+		target.setSource(extractSource(collectionEle));
+		target.setElementTypeName(defaultElementType);
+		target.setMergeEnabled(parseMergeAttribute(collectionEle));
+		//具体的List元素的解析过程。
+		parseCollectionElements(nl, target, bd, defaultElementType);
+		return target;
+	}
+	protected void parseCollectionElements(
+			NodeList elementNodes, Collection&lt;Object&gt; target, BeanDefinition bd, String defaultElementType) {
+		//遍历所有的元素节点，并判断其类型是否为Element。
+		for (int i = 0; i &lt; elementNodes.getLength(); i++) {
+			Node node = elementNodes.item(i);
+			if (node instanceof Element &amp;&amp; !DomUtils.nodeNameEquals(node, DESCRIPTION_ELEMENT)) {
+		//加入到target中去，target是一个ManagedList，同时触发对下一层子元素的解析过程，这是一个递归的调用。
+				target.add(parsePropertySubElement((Element) node, bd, defaultElementType));
+			}
+		}
+	}
+</code></pre>
+
+<p>经过这样一层一层的解析，我们在XML文件中定义的BeanDefinition就被整个给载入到了IoC容器中，并在容器中建立了数据映射。在IoC容器中建立了对应的数据结构，或者说可以看成是POJO对象在IoC容器中的映像，这些数据结构可以以AbstractBeanDefinition为入口，让IoC容器执行索引、查询和操作。</p>
+
+<p>在我的感觉中，对核心数据结构的定义和处理应该可以看成是一个软件的核心部分了。所以，这里的BeanDefinition的载入可以说是IoC容器的核心，如果说IoC容器是Spring的核心，那么这些BeanDefinition就是Spring的核心的核心了！</p>
+
+<p>呵呵，这部分代码数量不小，但如果掌握这条主线，其他都可以举一反三吧，就像我们掌握了操作系统启动的过程，以及在操作系统设计中的核心数据结构像进程数据结构，文件系统数据结构，网络协议数据结构的设计和处理一样，对整个系统的设计原理，包括移植，驱动开发和应用开发，是非常有帮助的！</p>
+</article>
+                <section class="author">
+                    <div class="avatar" style="background-image: url(/images/avatar.png);"></div>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    <div class="intro">暗夜·漆黑·沙砾·不熄</div>
+                </section>
+                <section class="recommend">
+                    
+                    
+                </section>
+                
+    <section id="disqus_thread"></section>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//username.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+
+
+            </article>
+        </article>
+        <footer class="footer">
+    <span class="copyright">
+        微光萤火 ©
+        <script type="text/javascript">
+            document.write(new Date().getFullYear());
+        </script>
+    </span>
+    <span class="publish">Powered by <a href="http://www.chole.io/" target="_blank">Ink</a></span>
+</footer>
+
+        <script src="/bundle/index.js"></script>
+    </body>
+</html>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
+  <title>微光萤火</title>
+  <id>http://www.chole.io/blog</id>
+  <updated>2017-05-31T16:27:09+08:00</updated>
+  <subtitle>最后的一丝荧光·暗夜·漆黑·沙砾·不熄</subtitle>
+  <link href="http://www.chole.io/blog"></link>
+  <author>
+    <name>微光萤火</name>
+  </author>
+  <entry>
+    <title>Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理</title>
+    <updated>2016-07-11T17:00:00+08:00</updated>
+    <id>tag:www.chole.io,2016-07-11:/blog/ink-blog-tool.html</id>
+    <content type="html">&lt;p&gt;下面我们从IOC/AOP开始，它们是Spring平台实现的核心部分；虽然，我们一开始大多只是在这个层面上，做一些配置和外部特性的使用工作，但对这两个核心模块工作原理和运作机制的理解，对深入理解Spring平台，却是至关重要的。&lt;/p&gt;&#xA;</content>
+    <link href="http://www.chole.io/blog/ink-blog-tool.html"></link>
+    <author>
+      <name>扑腾的萤火虫</name>
+    </author>
+  </entry>
+</feed>

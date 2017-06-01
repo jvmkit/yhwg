@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=1, minimum-scale=1, maximum-scale=1">
+<meta name="renderer" content="webkit">
+<meta name="google" value="notranslate">
+<meta name="robots" content="index,follow">
+
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="微光萤火">
+<meta name="twitter:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta name="twitter:image:src" content="http://nullpointerexception.ml/images/avatar.gif">
+
+<meta property="og:url" content="http://nullpointerexception.ml">
+<meta property="og:title" content="微光萤火">
+<meta property="og:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta property="og:site_name" content="微光萤火">
+<meta property="og:image" content="http://nullpointerexception.ml/images/avatar.gif">
+<meta property="og:type" content="website">
+<meta name="robots" content="noodp">
+
+<meta itemprop="name" content="微光萤火">
+<meta itemprop="description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta itemprop="image" content="http://nullpointerexception.ml/images/avatar.gif">
+
+<link rel="canonical" href="http://nullpointerexception.ml">
+
+<link rel="shortcut icon" href="/favicon.png">
+<link rel="apple-itouch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/bundle/index.css">
+<script type="text/javascript">
+    var timeSinceLang = {
+        year: '年前',
+        month: '个月前',
+        day: '天前',
+        hour: '小时前',
+        minute: '分钟前',
+        second: '秒前'
+    };
+    var root = '';
+</script>
+
+
+        <meta name="keywords" content="笔记,spring,java,">
+        <meta name="description" content="Spring技术内幕——深入解析Spring架构与设计原理（二）AOP">
+        <meta name="author" content="扑腾的萤火虫">
+        <title>Spring技术内幕——深入解析Spring架构与设计原理（二）AOP</title>
+    </head>
+    <body>
+        <article class="container">
+            <header class="header-wrap">
+  <a class="index" href="/">
+    <img class="logo" src="/images/avatar.gif" />
+    微光萤火
+  </a>
+  <ul class="menu">
+      <li class="menu-item"><a href="/archive.html">归档</a></li>
+      <li class="menu-item"><a href="/tag.html">标签</a></li>
+      <li class="menu-item"><a href="/atom.xml">订阅</a></li>
+  </ul>
+</header>
+
+            <article class="main article">
+                <h1 class="title">Spring技术内幕——深入解析Spring架构与设计原理（二）AOP</h1>
+                <section class="info">
+                    <span class="avatar" style="background-image: url(/images/user.gif);"></span>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    
+                    <span class="date" data-time="1496278800"><span class="from"></span></span>
+                    
+                    <span class="tags"><a class="tag" href="/tag/%e7%ac%94%e8%ae%b0/index.html">笔记</a><a class="tag" href="/tag/spring/index.html">spring</a><a class="tag" href="/tag/java/index.html">java</a></span>
+                </section>
+                <article class="content"><h3>关于AOP的个人理解</h3>
+
+<p>AOP联盟定义的AOP体系结构把与AOP相关的概念大致分为了由高到低、从使用到实现的三个层次。关于这个体系结构，个人的理解是这样的，从上往下，最高层是语言和开发环境，在这个环境中可以看到几个重要的概念：base可以视为待增强对象，或者说目标对象；aspect指切面，通常包含对于base的增强应用；configuration可以看成是一种编织或者说配置，通过在AOP体系中提供这个configuration配置环境，可以把base和aspect结合起来，从而完成切面对目标对象的编织实现。</p>
+
+<p>对Spring平台或者说生态系统来说，AOP是Spring框架的核心功能模块之一。AOP与IOC容器的结合使用, 为应用开发或者Spring自身功能的扩展都提供了许多便利。Spring AOP的实现和其他特性的实现一样，非常丰富，除了可以使用Spring本身提供的AOP实现之外，还封装了业界优秀的AOP解决方案AspectJ来让应用使用。在这里，主要对Spring自身的AOP实现原理做一些解析；在这个AOP实现中，Spring充分利用了IOC容器Proxy代理对象以及AOP拦截器的功能特性，通过这些对AOP基本功能的封装机制，为用户提供了AOP的实现框架。所以，要了解这些AOP的基本实现，需要我们对Java 的Proxy机制有一些基本了解。</p>
+
+<h3>AOP实现的基本线索</h3>
+
+<p>AOP实现中，可以看到三个主要的步骤，一个是代理对象的生成，然后是拦截器的作用，然后是Aspect编织的实现。AOP框架的丰富，很大程度体现在这三个具体实现中，所具有的丰富的技术选择，以及如何实现与IOC容器的无缝结合。毕竟这也是一个非常核心的模块，需要满足不同的应用需求带来的解决方案需求。
+在Spring AOP的实现原理中，我们主要举ProxyFactoryBean的实现作为例子和实现的基本线索进行分析；很大一个原因，是因为ProxyFactoryBean是在Spring IoC环境中，创建AOP应用的最底层方法，从中，可以看到一条实现AOP的基本线索。在ProxyFactoryBean中，它的AOP实现需要依赖JDK或者CGLIB提供的Proxy特性。从FactoryBean中获取对象，是从getObject()方法作为入口完成的。然后为proxy代理对象配置advisor链，这个配置是在initializeAdvisorChain方法中完成的；然后就为生成AOP代理对象做好了准备，生成代理对象如下所示：</p>
+
+<pre><code class="language-java">	private synchronized Object getSingletonInstance() {
+		if (this.singletonInstance == null) {
+			this.targetSource = freshTargetSource();
+			if (this.autodetectInterfaces &amp;&amp; getProxiedInterfaces().length == 0 &amp;&amp; !isProxyTargetClass()) {
+				// Rely on AOP infrastructure to tell us what interfaces to proxy.
+				Class targetClass = getTargetClass();
+				if (targetClass == null) {
+					throw new FactoryBeanNotInitializedException(&quot;Cannot determine target class for proxy&quot;);
+				}
+	 // 这里设置代理对象的接口		setInterfaces(ClassUtils.getAllInterfacesForClass(targetClass, this.proxyClassLoader));
+			}
+			// Initialize the shared singleton instance.
+			super.setFrozen(this.freezeProxy);
+			// 注意这里的方法会使用ProxyFactory来生成我们需要的Proxy
+			this.singletonInstance = getProxy(createAopProxy());
+		}
+		return this.singletonInstance;
+	}
+	//使用createAopProxy返回的AopProxy来得到代理对象
+	protected Object getProxy(AopProxy aopProxy) {
+		return aopProxy.getProxy(this.proxyClassLoader);
+	}
+</code></pre>
+
+<p>上面我们看到了在Spring中通过ProxyFactoryBean实现AOP功能的第一步，得到AopProxy代理对象的基本过程，下面我们看看AopProxy代理对象的拦截机制是怎样发挥作用，是怎样实现AOP功能的。我们知道，对代理对象的生成，有CGLIB和JDK两种生成方式，在CGLIB中，对拦截器设计是通过在Cglib2AopProxy的AopProxy代理对象生成的时候，在回调DynamicAdvisedInterceptor对象中实现的，这个回调的实现在intercept方法中完成。对于AOP是怎样完成对目标对象的增强的，这些实现是封装在AOP拦截器链中，由一个个具体的拦截器来完成的。具体拦截器的运行是在以下的代码实现中完成的，这些调用在ReflectiveMethodInvocation中。</p>
+
+<pre><code class="language-java">	public Object proceed() throws Throwable {
+		//	We start with an index of -1 and increment early.
+		//如果拦截器链中的拦截器迭代调用完毕，这里开始调用target的函数，这个函数是通过反射机制完成的,具体实现在：AopUtils.invokeJoinpointUsingReflection方法里面。
+		if (this.currentInterceptorIndex == this.interceptorsAndDynamicMethodMatchers.size() - 1) {
+			return invokeJoinpoint();
+		}
+		//这里沿着定义好的 interceptorOrInterceptionAdvice链进行处理。
+		Object interceptorOrInterceptionAdvice =
+		    this.interceptorsAndDynamicMethodMatchers.get(++this.currentInterceptorIndex);
+		if (interceptorOrInterceptionAdvice instanceof InterceptorAndDynamicMethodMatcher) {
+			// Evaluate dynamic method matcher here: static part will already have
+			// been evaluated and found to match.
+			//这里对拦截器进行动态匹配的的判断，还记得我们前面分析的pointcut吗？这里是触发进行匹配的地方，如果和定义的pointcut匹配，那么这个advice将会得到执行。
+			InterceptorAndDynamicMethodMatcher dm =
+			    (InterceptorAndDynamicMethodMatcher) interceptorOrInterceptionAdvice;
+			if (dm.methodMatcher.matches(this.method, this.targetClass, this.arguments)) {
+				return dm.interceptor.invoke(this);
+			}
+			else {
+				// Dynamic matching failed.
+				// Skip this interceptor and invoke the next in the chain.
+				// //如果不匹配，那么这个proceed会被递归调用，直到所有的拦截器都被运行过为止。
+				return proceed();
+			}
+		}
+		else {
+			// It's an interceptor, so we just invoke it: The pointcut will have
+			// been evaluated statically before this object was constructed.
+			//如果是一个interceptor，直接调用这个interceptor对应的方法
+			return((MethodInterceptor) interceptorOrInterceptionAdvice).invoke(this);
+		}
+	}
+
+</code></pre>
+
+<p>在调用拦截器的时候，我们接下去就可以看到对advice的通知的调用。而经过一系列的注册，适配的过程以后，拦截器在拦截的时候，会调用到预置好的一个通知适配器，设置通知拦截器，这是一系列Spring设计好为通知服务的类的一个，是最终完成通知拦截和实现的地方，非常的关键。比如，对MethodBeforeAdviceInterceptor的实现是这样的：</p>
+
+<pre><code class="language-java">public class MethodBeforeAdviceInterceptor implements MethodInterceptor, Serializable {
+
+	private MethodBeforeAdvice advice;
+
+
+	/**
+	 * Create a new MethodBeforeAdviceInterceptor for the given advice.
+	 * @param advice the MethodBeforeAdvice to wrap
+	 */
+	public MethodBeforeAdviceInterceptor(MethodBeforeAdvice advice) {
+		Assert.notNull(advice, &quot;Advice must not be null&quot;);
+		this.advice = advice;
+	}
+	//这个invoke方法是拦截器的回调方法，会在代理对象的方法被调用的时候触发回调。
+	public Object invoke(MethodInvocation mi) throws Throwable {
+		this.advice.before(mi.getMethod(), mi.getArguments(), mi.getThis() );
+		return mi.proceed();
+	}
+}
+</code></pre>
+
+<p>在代码中，可以看到，就是这里，会调用advice的before方法！这样就成功的完成了before通知的编织！</p>
+
+<p>因为Spring AOP本身并不打算成为一个一统天下的AOP框架，秉持Spring的一贯设计理念，设想中的Spring设计目标应该是，致力于AOP框架与IOC容器的紧密集成，通过集成AOP技术为JavaEE应用开发中遇到的普遍问题提供解决方案，从而为AOP用户使用AOP技术提供最大的便利，从这个角度上为Java EE的应用开发人员服务。在没有使用第三方AOP解决方案的时候，Spring通过虚拟机的Proxy特性和CGLIB实现了AOP的基本功能，我想，如果有了Spring AOP实现原理的知识背景，再加上我们对源代码实现的认真解读，可以为我们了解其他AOP框架与IOC容器的集成原理，也打下了很好的基础，并真正了解一个AOP框架是在怎样实现的。</p>
+
+<p>这还真是就是我们喜欢开源软件一个原因，有了源代码，软件就没有什么神秘的面纱了！本立而道生，多读源代码吧，或者找一本从源代码出发讲解软件实现的书来看看，就像以前我们学习操作系统，学习TCP/IP那样！一定会有长进的。</p>
+</article>
+                <section class="author">
+                    <div class="avatar" style="background-image: url(/images/user.gif);"></div>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    <div class="intro">暗夜·漆黑·沙砾·不熄</div>
+                </section>
+                <section class="recommend">
+                    
+                    
+                    <section class="nav next">
+                        <div class="head">下篇文章</div>
+                        <a class="link" href="/ink-blog-spring1.html">Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理</a>
+                    </section>
+                    
+                </section>
+                
+    <section id="disqus_thread"></section>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//username.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+
+
+            </article>
+        </article>
+        <footer class="footer">
+    <span class="copyright">
+        微光萤火 ©
+        <script type="text/javascript">
+            document.write(new Date().getFullYear());
+        </script>
+    </span>
+    <span class="publish">Powered by <a href="http://www.chole.io/" target="_blank">Ink</a></span>
+</footer>
+
+        <script src="/bundle/index.js"></script>
+    </body>
+</html>

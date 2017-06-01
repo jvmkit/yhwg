@@ -1,18 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
   <title>微光萤火</title>
   <id>http://nullpointerexception.ml</id>
-  <updated>2017-05-31T18:35:41+08:00</updated>
+  <updated>2017-06-01T11:27:34+08:00</updated>
   <subtitle>最后的一丝荧光·暗夜·漆黑·沙砾·不熄</subtitle>
   <link href="http://nullpointerexception.ml"></link>
   <author>
     <name>微光萤火</name>
   </author>
   <entry>
+    <title>Spring技术内幕——深入解析Spring架构与设计原理（二）AOP</title>
+    <updated>2017-06-01T09:00:00+08:00</updated>
+    <id>tag:nullpointerexception.ml,2017-06-01:/ink-blog-spring2.html</id>
+    <content type="html">&lt;p&gt;AOP联盟定义的AOP体系结构把与AOP相关的概念大致分为了由高到低、从使用到实现的三个层次。关于这个体系结构，个人的理解是这样的，从上往下，最高层是语言和开发环境，在这个环境中可以看到几个重要的概念：base可以视为待增强对象，或者说目标对象；aspect指切面，通常包含对于base的增强应用；configuration可以看成是一种编织或者说配置，通过在AOP体系中提供这个configuration配置环境，可以把base和aspect结合起来，从而完成切面对目标对象的编织实现。&lt;/p&gt;&#xA;</content>
+    <link href="http://nullpointerexception.ml/ink-blog-spring2.html"></link>
+    <author>
+      <name>扑腾的萤火虫</name>
+    </author>
+  </entry>
+  <entry>
     <title>Spring技术内幕——深入解析Spring架构与设计原理（一）IOC实现原理</title>
     <updated>2017-05-31T18:00:00+08:00</updated>
-    <id>tag:nullpointerexception.ml,2017-05-31:/ink-blog-tool.html</id>
+    <id>tag:nullpointerexception.ml,2017-05-31:/ink-blog-spring1.html</id>
     <content type="html">&lt;p&gt;下面我们从IOC/AOP开始，它们是Spring平台实现的核心部分；虽然，我们一开始大多只是在这个层面上，做一些配置和外部特性的使用工作，但对这两个核心模块工作原理和运作机制的理解，对深入理解Spring平台，却是至关重要的。&lt;/p&gt;&#xA;</content>
-    <link href="http://nullpointerexception.ml/ink-blog-tool.html"></link>
+    <link href="http://nullpointerexception.ml/ink-blog-spring1.html"></link>
     <author>
       <name>扑腾的萤火虫</name>
     </author>

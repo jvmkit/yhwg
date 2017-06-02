@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+<meta http-equiv="Cache-Control" content="no-siteapp">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=1, minimum-scale=1, maximum-scale=1">
+<meta name="renderer" content="webkit">
+<meta name="google" value="notranslate">
+<meta name="robots" content="index,follow">
+
+
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="微光萤火">
+<meta name="twitter:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta name="twitter:image:src" content="http://nullpointerexception.ml/images/avatar.gif">
+
+<meta property="og:url" content="http://nullpointerexception.ml">
+<meta property="og:title" content="微光萤火">
+<meta property="og:description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta property="og:site_name" content="微光萤火">
+<meta property="og:image" content="http://nullpointerexception.ml/images/avatar.gif">
+<meta property="og:type" content="website">
+<meta name="robots" content="noodp">
+
+<meta itemprop="name" content="微光萤火">
+<meta itemprop="description" content="最后的一丝荧光·暗夜·漆黑·沙砾·不熄">
+<meta itemprop="image" content="http://nullpointerexception.ml/images/avatar.gif">
+
+<link rel="canonical" href="http://nullpointerexception.ml">
+
+<link rel="shortcut icon" href="/favicon.png">
+<link rel="apple-itouch-icon" href="/favicon.png">
+<link rel="stylesheet" href="/bundle/index.css">
+<script type="text/javascript">
+    var timeSinceLang = {
+        year: '年前',
+        month: '个月前',
+        day: '天前',
+        hour: '小时前',
+        minute: '分钟前',
+        second: '秒前'
+    };
+    var root = '';
+</script>
+
+
+        <meta name="keywords" content="笔记,spring,java,">
+        <meta name="description" content="Spring技术内幕——深入解析Spring架构与设计原理（三）数据库的操作实现">
+        <meta name="author" content="扑腾的萤火虫">
+        <title>Spring技术内幕——深入解析Spring架构与设计原理（三）数据库的操作实现</title>
+    </head>
+    <body>
+        <article class="container">
+            <header class="header-wrap">
+  <a class="index" href="/">
+    <img class="logo" src="/images/avatar.gif" />
+    微光萤火
+  </a>
+  <ul class="menu">
+      <li class="menu-item"><a href="/archive.html">归档</a></li>
+      <li class="menu-item"><a href="/tag.html">标签</a></li>
+      <li class="menu-item"><a href="/atom.xml">订阅</a></li>
+  </ul>
+</header>
+
+            <article class="main article">
+                <h1 class="title">Spring技术内幕——深入解析Spring架构与设计原理（三）数据库的操作实现</h1>
+                <section class="info">
+                    <span class="avatar" style="background-image: url(/images/user.gif);"></span>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    
+                    <span class="date" data-time="1496365200"><span class="from"></span></span>
+                    
+                    <span class="tags"><a class="tag" href="/tag/%e7%ac%94%e8%ae%b0/index.html">笔记</a><a class="tag" href="/tag/spring/index.html">spring</a><a class="tag" href="/tag/java/index.html">java</a></span>
+                </section>
+                <article class="content"><h3>关于Spring JDBC</h3>
+
+<p>还是从Spring JDBC说起吧，虽然现在应用很多都是直接使用Hibernate或者其他的ORM工具。但JDBC毕竟还是很基本的，其中的JdbcTemplate就是我们经常使用的，比如JDBCTemplate的execute方法，就是一个基本的方法，在这个方法的实现中，可以看到对数据库操作的基本过程。</p>
+
+<pre><code class="language-java">		//execute方法执行的是输入的sql语句
+	public void execute(final String sql) throws DataAccessException {
+		if (logger.isDebugEnabled()) {
+			logger.debug(&quot;Executing SQL statement [&quot; + sql + &quot;]&quot;);
+		}
+		class ExecuteStatementCallback implements StatementCallback&lt;Object&gt;, SqlProvider {
+			public Object doInStatement(Statement stmt) throws SQLException {
+				stmt.execute(sql);
+				return null;
+			}
+			public String getSql() {
+				return sql;
+			}
+		}
+		execute(new ExecuteStatementCallback());
+	}
+	//这是使用java.sql.Statement处理静态SQL语句的方法
+	public &lt;T&gt; T execute(StatementCallback&lt;T&gt; action) throws DataAccessException {
+		Assert.notNull(action, &quot;Callback object must not be null&quot;);
+		//这里取得数据库的Connection，这个数据库的Connection已经在Spring的事务管理之下
+		Connection con = DataSourceUtils.getConnection(getDataSource());
+		Statement stmt = null;
+		try {
+			Connection conToUse = con;
+			if (this.nativeJdbcExtractor != null &amp;&amp;
+					this.nativeJdbcExtractor.isNativeConnectionNecessaryForNativeStatements()) {
+				conToUse = this.nativeJdbcExtractor.getNativeConnection(con);
+			}
+			//创建Statement
+			stmt = conToUse.createStatement();
+			applyStatementSettings(stmt);
+			Statement stmtToUse = stmt;
+			if (this.nativeJdbcExtractor != null) {
+				stmtToUse = this.nativeJdbcExtractor.getNativeStatement(stmt);
+			}
+			//这里调用回调函数
+			T result = action.doInStatement(stmtToUse);
+			handleWarnings(stmt);
+			return result;
+		}
+		catch (SQLException ex) {
+			// Release Connection early, to avoid potential connection pool deadlock
+			// in the case when the exception translator hasn't been initialized yet.
+			//如果捕捉到数据库异常，把数据库Connection释放，同时抛出一个经过Spring转换过的Spring数据库异常
+			//Spring做了一项有意义的工作，就是把这些数据库异常统一到自己的异常体系里了
+			JdbcUtils.closeStatement(stmt);
+			stmt = null;
+			DataSourceUtils.releaseConnection(con, getDataSource());
+			con = null;
+			throw getExceptionTranslator().translate(&quot;StatementCallback&quot;, getSql(action), ex);
+		}
+		finally {
+			JdbcUtils.closeStatement(stmt);
+			//释放数据库connection
+			DataSourceUtils.releaseConnection(con, getDataSource());
+		}
+	}
+</code></pre>
+
+<p>在使用数据库的时候，有一个很重要的地方就是对数据库连接的管理，在这里，是由DataSourceUtils来完成的。Spring通过这个辅助类来对数据的Connection进行管理。比如通过它来完成打开和关闭Connection等操作。DataSourceUtils对这些数据库Connection管理的实现, 如以下代码所示。</p>
+
+<pre><code class="language-java">		//这是取得数据库连接的调用，实现是通过调用doGetConnection完成的，这里执行了异常的转换操作
+	public static Connection getConnection(DataSource dataSource) throws CannotGetJdbcConnectionException {
+		try {
+			return doGetConnection(dataSource);
+		}
+		catch (SQLException ex) {
+			throw new CannotGetJdbcConnectionException(&quot;Could not get JDBC Connection&quot;, ex);
+		}
+	}
+	public static Connection doGetConnection(DataSource dataSource) throws SQLException {
+		Assert.notNull(dataSource, &quot;No DataSource specified&quot;);
+		//把对数据库的Connection放到事务管理中进行管理，这里使用TransactionSynchronizationManager中定义的ThreadLocal变量来和线程绑定数据库连接
+		//如果在TransactionSynchronizationManager中已经有与当前线程绑定数据库连接，那就直接取出来使用
+		ConnectionHolder conHolder = (ConnectionHolder) TransactionSynchronizationManager.getResource(dataSource);
+		if (conHolder != null &amp;&amp; (conHolder.hasConnection() || conHolder.isSynchronizedWithTransaction())) {
+			conHolder.requested();
+			if (!conHolder.hasConnection()) {
+				logger.debug(&quot;Fetching resumed JDBC Connection from DataSource&quot;);
+				conHolder.setConnection(dataSource.getConnection());
+			}
+			return conHolder.getConnection();
+		}
+		// Else we either got no holder or an empty thread-bound holder here.
+		// 这里得到需要的数据库Connection，在Bean配置文件中定义好的，
+		// 同时最后把新打开的数据库Connection通过TransactionSynchronizationManager和当前线程绑定起来。
+		logger.debug(&quot;Fetching JDBC Connection from DataSource&quot;);
+		Connection con = dataSource.getConnection();
+
+		if (TransactionSynchronizationManager.isSynchronizationActive()) {
+			logger.debug(&quot;Registering transaction synchronization for JDBC Connection&quot;);
+			// Use same Connection for further JDBC actions within the transaction.
+			// Thread-bound object will get removed by synchronization at transaction completion.
+			ConnectionHolder holderToUse = conHolder;
+			if (holderToUse == null) {
+				holderToUse = new ConnectionHolder(con);
+			}
+			else {
+				holderToUse.setConnection(con);
+			}
+			holderToUse.requested();
+			TransactionSynchronizationManager.registerSynchronization(
+					new ConnectionSynchronization(holderToUse, dataSource));
+			holderToUse.setSynchronizedWithTransaction(true);
+			if (holderToUse != conHolder) {
+				TransactionSynchronizationManager.bindResource(dataSource, holderToUse);
+			}
+		}
+		return con;
+	}
+</code></pre>
+
+<h3>关于数据库操作类RDBMS</h3>
+
+<p>从JdbcTemplate中，我们看到，他提供了许多简单查询和更新的功能。但是，如果需要更高层次的抽象，以及更面向对象的方法来访问数据库，Spring为我们提供了org.springframework.jdbc.object包，里面包含了SqlQuery、SqlMappingQuery、SqlUpdate和StoredProcedure等类，这些类都是Spring JDBC应用程序可以使用的。但要注意，在使用这些类时需要为它们配置好JdbcTemplate作为其基本的操作实现，因为在它们的功能实现中，对数据库操作的那部分实现基本上还是依赖于JdbcTemplate来完成的。</p>
+
+<p>比如，对MappingSqlQuery使用的过程，是非常简洁的；在设计好数据的映射代码之后，查询得到的记录已经按照前面的设计转换为对象List了，一条查询记录对应于一个数据对象，可以把数据库的数据记录直接映射成Java对象在程序中使用，同时又可避免使用第三方ORM工具的配置，对于简单的数据映射场合是非常方便的；在mapRow方法的实现中提供的数据转换规则，和我们使用Hibernate时，Hibernate的hbm文件起到的作用是非常类似的。这个MappingSqlQuery需要的对设置进行compile，这些compile是这样完成的，如以下代码所示：</p>
+
+<pre><code class="language-java">	protected final void compileInternal() {
+		//这里是对参数的compile过程，所有的参数都在getDeclaredParameters里面，生成了一个PreparedStatementCreatorFactory
+		this.preparedStatementFactory = new PreparedStatementCreatorFactory(getSql(), getDeclaredParameters());
+		this.preparedStatementFactory.setResultSetType(getResultSetType());
+		this.preparedStatementFactory.setUpdatableResults(isUpdatableResults());
+		this.preparedStatementFactory.setReturnGeneratedKeys(isReturnGeneratedKeys());
+		if (getGeneratedKeysColumnNames() != null) {
+			this.preparedStatementFactory.setGeneratedKeysColumnNames(getGeneratedKeysColumnNames());
+		}
+this.preparedStatementFactory.setNativeJdbcExtractor(getJdbcTemplate().getNativeJdbcExtractor());
+		onCompileInternal();
+	}
+</code></pre>
+
+<p>在执行查询时，执行的实际上是SqlQuery的executeByNamedParam方法，这个方法需要完成的工作包括配置SQL语句，配置数据记录到数据对象的转换的RowMapper，然后使用JdbcTemplate来完成数据的查询，并启动数据记录到Java数据对象的转换，如以下代码所示：</p>
+
+<pre><code class="language-java">	public List&lt;T&gt; executeByNamedParam(Map&lt;String, ?&gt; paramMap, Map context) throws DataAccessException {
+		validateNamedParameters(paramMap);
+		//得到需要执行的SQL语句
+		ParsedSql parsedSql = getParsedSql();
+		MapSqlParameterSource paramSource = new MapSqlParameterSource(paramMap);
+		String sqlToUse = NamedParameterUtils.substituteNamedParameters(parsedSql, paramSource);
+		//配置好SQL语句需要的Parameters及rowMapper，这个rowMapper完成数据记录到对象的转换
+		Object[] params = NamedParameterUtils.buildValueArray(parsedSql, paramSource, getDeclaredParameters());
+		RowMapper&lt;T&gt; rowMapper = newRowMapper(params, context);
+		//我们又看到了JdbcTemplate,这里使用JdbcTemplate来完成对数据库的查询操作，所以我们说JdbcTemplate是非常基本的操作类
+ 		return getJdbcTemplate().query(newPreparedStatementCreator(sqlToUse, params), rowMapper);
+	}
+</code></pre>
+
+<p>在Spring对JDBC的操作中，基本上是对JDBC/Hibernate基础上API的封装。这些封装可以直接使用，也可以在IoC容器中配置好了再使用，当结合IoC容器的基础上进行使用的时候，可以看到许多和事务管理相关的处理部分，都是非常值得学习的，在那里，可以看到对数据源的管理 - Hibernate中session的管理，与线程的结合等等。</p>
+</article>
+                <section class="author">
+                    <div class="avatar" style="background-image: url(/images/user.gif);"></div>
+                    <a class="name" href="/about.me.html">扑腾的萤火虫</a>
+                    <div class="intro">暗夜·漆黑·沙砾·不熄</div>
+                </section>
+                <section class="recommend">
+                    
+                    
+                    <section class="nav next">
+                        <div class="head">下篇文章</div>
+                        <a class="link" href="/ink-blog-spring2.html">Spring技术内幕——深入解析Spring架构与设计原理（二）AOP</a>
+                    </section>
+                    
+                </section>
+                
+<div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+<script>
+  var cloudTieConfig = {
+    url: document.location.href, 
+    sourceId: "",
+    productKey: "ace2dd56d73a4530b7a1cf44841adc96",
+    target: "cloud-tie-wrapper"
+  };
+</script>
+<script src="https://img1.cache.netease.com/f2e/tie/yun/sdk/loader.js"></script>
+
+
+            </article>
+        </article>
+        <footer class="footer">
+    <span class="copyright">
+        微光萤火 ©
+        <script type="text/javascript">
+            document.write(new Date().getFullYear());
+        </script>
+    </span>
+    <span class="publish">Powered by <a href="http://www.chole.io/" target="_blank">Ink</a></span>
+</footer>
+
+        <script src="/bundle/index.js"></script>
+    </body>
+</html>

@@ -1,12 +1,22 @@
 <?xml version="1.0" encoding="UTF-8"?><feed xmlns="http://www.w3.org/2005/Atom">
   <title>微光萤火</title>
   <id>http://nullpointerexception.ml</id>
-  <updated>2017-06-01T15:52:13+08:00</updated>
+  <updated>2017-06-02T15:23:43+08:00</updated>
   <subtitle>最后的一丝荧光·暗夜·漆黑·沙砾·不熄</subtitle>
   <link href="http://nullpointerexception.ml"></link>
   <author>
     <name>微光萤火</name>
   </author>
+  <entry>
+    <title>Spring技术内幕——深入解析Spring架构与设计原理（三）数据库的操作实现</title>
+    <updated>2017-06-02T09:00:00+08:00</updated>
+    <id>tag:nullpointerexception.ml,2017-06-02:/ink-blog-spring3.html</id>
+    <content type="html">&lt;p&gt;还是从Spring JDBC说起吧，虽然现在应用很多都是直接使用Hibernate或者其他的ORM工具。但JDBC毕竟还是很基本的，其中的JdbcTemplate就是我们经常使用的，比如JDBCTemplate的execute方法，就是一个基本的方法，在这个方法的实现中，可以看到对数据库操作的基本过程。&lt;/p&gt;&#xA;</content>
+    <link href="http://nullpointerexception.ml/ink-blog-spring3.html"></link>
+    <author>
+      <name>扑腾的萤火虫</name>
+    </author>
+  </entry>
   <entry>
     <title>Spring技术内幕——深入解析Spring架构与设计原理（二）AOP</title>
     <updated>2017-06-01T09:00:00+08:00</updated>
